@@ -1,7 +1,4 @@
-import { redirect } from "next/navigation";
-
-// The CRM homepage IS the inbox. (The standalone contact form still
-// lives at /form if you ever want to embed it somewhere.)
-export default function Home() {
-  redirect("/inbox");
-}
+// The CRM homepage IS the inbox — render it directly (no redirect, which
+// can misbehave when Vercel tries to prerender the root route).
+export { default } from "./inbox/page";
+export const dynamic = "force-dynamic";
