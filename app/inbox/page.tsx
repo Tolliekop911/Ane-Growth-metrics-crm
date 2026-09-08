@@ -134,21 +134,29 @@ export default async function InboxPage({
 
             {r.message && <p className="msg">{r.message}</p>}
 
-            <form action="/api/status" method="post" className="statusrow">
-              <input type="hidden" name="id" value={r.id} />
-              <span className="setlabel">Set status</span>
-              {STATUSES.map((s) => (
-                <button
-                  key={s}
-                  type="submit"
-                  name="status"
-                  value={s}
-                  className={"chip" + (r.status === s ? " on" : "")}
-                >
-                  {s}
+            <div className="cardfooter">
+              <form action="/api/status" method="post" className="statusrow">
+                <input type="hidden" name="id" value={r.id} />
+                <span className="setlabel">Set status</span>
+                {STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    type="submit"
+                    name="status"
+                    value={s}
+                    className={"chip" + (r.status === s ? " on" : "")}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </form>
+              <form action="/api/delete" method="post" className="delform">
+                <input type="hidden" name="id" value={r.id} />
+                <button type="submit" className="delbtn" aria-label="Delete inquiry">
+                  Delete
                 </button>
-              ))}
-            </form>
+              </form>
+            </div>
           </article>
         ))}
       </div>
@@ -248,8 +256,16 @@ const styles = `
   margin: 16px 0 4px; white-space: pre-wrap;
   border-left: 2px solid var(--line); padding-left: 14px;
 }
-.statusrow { display: flex; align-items: center; gap: 8px; margin-top: 18px; flex-wrap: wrap;
-  padding-top: 16px; border-top: 1px solid var(--line); }
+.cardfooter { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.statusrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.delform { flex-shrink: 0; }
+.delbtn {
+  background: transparent; border: 1px solid transparent; color: var(--muted-2);
+  padding: 7px 12px; border-radius: 999px; font-size: 11px; letter-spacing: 0.06em;
+  text-transform: uppercase; font-weight: 600; cursor: pointer; transition: all .15s ease;
+}
+.delbtn:hover { color: #e88a7d; border-color: rgba(232,138,125,0.4); }
 .setlabel { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted-2); margin-right: 4px; }
 .chip {
   background: transparent; border: 1px solid var(--line); color: var(--muted);
