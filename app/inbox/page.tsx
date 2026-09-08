@@ -1,78 +1,24 @@
 import { supabaseAdmin, type Inquiry } from "@/lib/supabaseAdmin";
-import { isUnlocked, STATUSES } from "./session";
-import { unlock, lock } from "./auth";
-import { setStatus } from "./status";
+import { STATUSES } from "./session";
 
 export const dynamic = "force-dynamic";
 
 function fmt(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function LockScreen() {
-  return (
-    <main className="lockwrap">
-      <form action={unlock as unknown as (fd: FormData) => void} className="lockbox">
-        <div className="brand">ane</div>
-        <h1>Inquiries</h1>
-        <p>Enter the shared password to view inquiries.</p>
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          autoFocus
-        />
-        <button type="submit">Unlock</button>
-      </form>
-      <style>{styles}</style>
-    </main>
-  );
-}
-
-function DebugError({ where, e }: { where: string; e: unknown }) {
-  const msg =
-    e instanceof Error ? `${e.name}: ${e.message}\n\n${e.stack || ""}` : String(e);
-  return (
-    <main style={{ padding: 32, fontFamily: "monospace", color: "#efe9df" }}>
-      <h1 style={{ fontFamily: "Georgia, serif" }}>Inbox diagnostic</h1>
-      <p style={{ color: "#e88a7d" }}>Failure at: {where}</p>
-      <pre
-        style={{
-          whiteSpace: "pre-wrap",
-          background: "#16130f",
-          border: "1px solid #2a251e",
-          borderRadius: 8,
-          padding: 16,
-          fontSize: 13,
-        }}
-      >
-        {msg}
-      </pre>
-      <p style={{ color: "#8a8175", marginTop: 16 }}>
-        SUPABASE_URL set: {process.env.SUPABASE_URL ? "yes" : "NO"} · key set:{" "}
-        {process.env.SUPABASE_SERVICE_ROLE_KEY ? "yes" : "NO"} · password set:{" "}
-        {process.env.INBOX_PASSWORD ? "yes" : "NO"}
-      </p>
-    </main>
-  );
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
 }
 
 export default async function InboxPage() {
-  let unlocked = false;
-  try {
-    unlocked = isUnlocked();
-  } catch (e) {
-    return <DebugError where="isUnlocked()" e={e} />;
-  }
-  if (!unlocked) return <LockScreen />;
-
   let rows: Inquiry[] = [];
   let loadError = "";
   try {
@@ -83,10 +29,10 @@ export default async function InboxPage() {
     if (error) loadError = error.message;
     else rows = (data as Inquiry[]) || [];
   } catch (e) {
-    return <DebugError where="supabase query" e={e} />;
+    loadError =
+      "Couldn't reach the database. Check the Supabase environment variables in Vercel.";
   }
 
-  try {
   const counts = {
     total: rows.length,
     new: rows.filter((r) => r.status === "new").length,
@@ -97,11 +43,7 @@ export default async function InboxPage() {
     <main className="wrap">
       <header className="topbar">
         <div className="brand">ane</div>
-        <form action={lock}>
-          <button className="lockbtn" type="submit">
-            Lock
-          </button>
-        </form>
+        <span className="tagline">Inquiries</span>
       </header>
 
       <div className="head">
@@ -139,14 +81,13 @@ export default async function InboxPage() {
                 </a>
               </div>
               <div className="meta">
-                {r.project_type && (
-                  <span className="tag">{r.project_type}</span>
-                )}
+                {r.project_type && <span className="tag">{r.project_type}</span>}
                 <span className="date">{fmt(r.created_at)}</span>
               </div>
             </div>
             {r.message && <p className="msg">{r.message}</p>}
-            <form action={setStatus} className="statusrow">
+            <form action="/api/status" method="post" className="statusrow">
+              <input type="hidden" name="id" value={r.id} />
               {STATUSES.map((s) => (
                 <button
                   key={s}
@@ -158,7 +99,6 @@ export default async function InboxPage() {
                   {s}
                 </button>
               ))}
-              <input type="hidden" name="id" value={r.id} />
             </form>
           </article>
         ))}
@@ -167,9 +107,6 @@ export default async function InboxPage() {
       <style>{styles}</style>
     </main>
   );
-  } catch (e) {
-    return <DebugError where="render" e={e} />;
-  }
 }
 
 const styles = `
@@ -179,13 +116,7 @@ const styles = `
   padding: 12px 0 24px; border-bottom: 1px solid var(--line); margin-bottom: 32px;
 }
 .brand { font-family: Georgia, serif; font-style: italic; font-size: 24px; }
-.lockbtn, .head { }
-.lockbtn {
-  background: transparent; border: 1px solid var(--line); color: var(--muted);
-  padding: 8px 16px; border-radius: 999px; font-size: 11px; letter-spacing: .12em;
-  text-transform: uppercase; cursor: pointer;
-}
-.lockbtn:hover { color: var(--text); border-color: var(--muted); }
+.tagline { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
 .head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 26px; flex-wrap: wrap; gap: 12px; }
 .head h1 { font-family: Georgia, serif; font-weight: 400; font-size: 32px; margin: 0; }
 .stats { display: flex; gap: 22px; font-size: 13px; color: var(--muted); }
@@ -222,20 +153,4 @@ const styles = `
 }
 .chip:hover { color: var(--text); border-color: var(--muted); }
 .chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-
-.lockwrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
-.lockbox { width: 100%; max-width: 340px; text-align: center; }
-.lockbox h1 { font-family: Georgia, serif; font-weight: 400; font-size: 30px; margin: 18px 0 8px; }
-.lockbox p { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
-.lockbox input {
-  width: 100%; background: transparent; border: 1px solid var(--line);
-  border-radius: 999px; color: var(--text); padding: 13px 20px; font-size: 15px;
-  outline: none; text-align: center; margin-bottom: 14px;
-}
-.lockbox input:focus { border-color: var(--text); }
-.lockbox button {
-  width: 100%; background: var(--accent); color: var(--accent-ink); border: none;
-  padding: 14px; border-radius: 999px; font-size: 12px; letter-spacing: .16em;
-  text-transform: uppercase; font-weight: 700; cursor: pointer;
-}
 `;
