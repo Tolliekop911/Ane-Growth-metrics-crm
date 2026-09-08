@@ -1,0 +1,68 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     ANE Growth — connect the website contact form to the CRM
+
+     WHAT TO CHANGE:
+       Replace  https://YOUR-APP.vercel.app  (appears twice below)
+       with the real Vercel URL once the app is deployed.
+
+     There are TWO options. Use whichever fits the website.
+     ═══════════════════════════════════════════════════════════════ -->
+
+
+<!-- ─────────────────────────────────────────────────────────────
+     OPTION A  ·  Keep your EXISTING form design, just wire up submit
+     Add this <script> once, anywhere on the page that has the form.
+     It looks for a form with id="ane-contact" and sends it to the CRM.
+     Make sure the form's fields are named: name, email, project_type, message
+     ───────────────────────────────────────────────────────────── -->
+<script>
+  (function () {
+    var ENDPOINT = "https://YOUR-APP.vercel.app/api/inquiry";
+    var form = document.getElementById("ane-contact");
+    if (!form) return;
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var data = Object.fromEntries(new FormData(form).entries());
+
+      fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (res.ok) {
+            form.innerHTML =
+              "<p style='padding:24px 0;font-size:16px'>Thank you — your inquiry is in. We'll be in touch soon.</p>";
+          } else {
+            alert(res.error || "Something went wrong. Please try again.");
+          }
+        })
+        .catch(function () {
+          alert("Couldn't send. Please try again in a moment.");
+        });
+    });
+  })();
+</script>
+
+<!-- If the existing form doesn't already have id="ane-contact", add it:
+       <form id="ane-contact"> ... </form>
+     and give each input a name:
+       <input name="name">  <input name="email">
+       <input name="project_type">  <textarea name="message">
+-->
+
+
+
+<!-- ─────────────────────────────────────────────────────────────
+     OPTION B  ·  Simplest — just embed the ready-made form page.
+     Drop this where the contact form should appear. No fields to wire.
+     ───────────────────────────────────────────────────────────── -->
+<!--
+<iframe
+  src="https://YOUR-APP.vercel.app"
+  style="width:100%;min-height:900px;border:0;"
+  title="Contact ANE Growth"
+></iframe>
+-->
