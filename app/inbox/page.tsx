@@ -36,8 +36,42 @@ function LockScreen() {
   );
 }
 
+function DebugError({ where, e }: { where: string; e: unknown }) {
+  const msg =
+    e instanceof Error ? `${e.name}: ${e.message}\n\n${e.stack || ""}` : String(e);
+  return (
+    <main style={{ padding: 32, fontFamily: "monospace", color: "#efe9df" }}>
+      <h1 style={{ fontFamily: "Georgia, serif" }}>Inbox diagnostic</h1>
+      <p style={{ color: "#e88a7d" }}>Failure at: {where}</p>
+      <pre
+        style={{
+          whiteSpace: "pre-wrap",
+          background: "#16130f",
+          border: "1px solid #2a251e",
+          borderRadius: 8,
+          padding: 16,
+          fontSize: 13,
+        }}
+      >
+        {msg}
+      </pre>
+      <p style={{ color: "#8a8175", marginTop: 16 }}>
+        SUPABASE_URL set: {process.env.SUPABASE_URL ? "yes" : "NO"} · key set:{" "}
+        {process.env.SUPABASE_SERVICE_ROLE_KEY ? "yes" : "NO"} · password set:{" "}
+        {process.env.INBOX_PASSWORD ? "yes" : "NO"}
+      </p>
+    </main>
+  );
+}
+
 export default async function InboxPage() {
-  if (!isUnlocked()) return <LockScreen />;
+  let unlocked = false;
+  try {
+    unlocked = isUnlocked();
+  } catch (e) {
+    return <DebugError where="isUnlocked()" e={e} />;
+  }
+  if (!unlocked) return <LockScreen />;
 
   let rows: Inquiry[] = [];
   let loadError = "";
@@ -49,10 +83,10 @@ export default async function InboxPage() {
     if (error) loadError = error.message;
     else rows = (data as Inquiry[]) || [];
   } catch (e) {
-    loadError =
-      "Couldn't reach the database. Check the Supabase environment variables.";
+    return <DebugError where="supabase query" e={e} />;
   }
 
+  try {
   const counts = {
     total: rows.length,
     new: rows.filter((r) => r.status === "new").length,
@@ -133,6 +167,9 @@ export default async function InboxPage() {
       <style>{styles}</style>
     </main>
   );
+  } catch (e) {
+    return <DebugError where="render" e={e} />;
+  }
 }
 
 const styles = `
